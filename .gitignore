@@ -2,3 +2,7 @@
 build/
 *.hex
 *.elf
+__pycache__/
+.venv/
+music/*
+!music/.gitkeep
