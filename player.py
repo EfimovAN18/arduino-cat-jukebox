@@ -15,18 +15,23 @@ import time
 from pathlib import Path
 
 import librosa
+import numpy as np
 import pygame
 import serial
 from serial.tools import list_ports
 
 MUSIC_DIR = Path(__file__).parent / "music"
 
-# Направление джойстика -> (файл в music/, название на экране, до 13 символов латиницей)
+# Направление джойстика -> (файл в music/, название на экране).
+# Название латиницей (LCD не знает кириллицу), до 32 символов —
+# если длиннее 13, на экране оно побежит строкой.
 SLOTS = {
-    "L": ("left.mp3",  "LIZA"),
-    "R": ("right.mp3", "BOYCHIK"),
-    "U": ("up.mp3",    "LISTEN2HEART"),
+    "L": ("left.mp3",  "FACE - LIZA"),
+    "R": ("right.mp3", "FRENDZONA - BOYCHIK"),
+    "U": ("up.mp3",    "ROXETTE - LISTEN TO YOUR HEART"),
 }
+
+VOLUME_STEPS = [100, 75, 50, 25, 0]  # джойстик вниз переключает по кругу
 
 LATENCY_S = 0.05  # сдвиг прыжка, если кажется что котик опаздывает/спешит
 
@@ -42,18 +47,23 @@ def find_port() -> str:
     return ports[0]
 
 
-def load_beats(track: Path) -> list[float]:
-    """Находит биты трека и кэширует их рядом, чтобы не считать каждый раз."""
+def analyze(track: Path) -> dict:
+    """Находит темп и биты трека, кэширует рядом, чтобы не считать каждый раз."""
     cache = track.with_suffix(".beats.json")
     if cache.exists() and cache.stat().st_mtime >= track.stat().st_mtime:
-        return json.loads(cache.read_text())
+        data = json.loads(cache.read_text())
+        if isinstance(data, dict):
+            return data
 
     print(f"  анализирую биты: {track.name} ...")
     y, sr = librosa.load(track, sr=22050, mono=True)
-    _, frames = librosa.beat.beat_track(y=y, sr=sr)
-    beats = librosa.frames_to_time(frames, sr=sr).tolist()
-    cache.write_text(json.dumps(beats))
-    return beats
+    tempo, frames = librosa.beat.beat_track(y=y, sr=sr)
+    data = {
+        "tempo": round(float(np.atleast_1d(tempo)[0])),
+        "beats": librosa.frames_to_time(frames, sr=sr).tolist(),
+    }
+    cache.write_text(json.dumps(data))
+    return data
 
 
 def main():
@@ -61,11 +71,12 @@ def main():
     parser.add_argument("--port", help="COM-порт Arduino, например COM5")
     args = parser.parse_args()
 
-    beats_by_slot = {}
+    tracks = {}
     for key, (filename, _) in SLOTS.items():
         track = MUSIC_DIR / filename
         if track.exists():
-            beats_by_slot[key] = load_beats(track)
+            tracks[key] = analyze(track)
+            print(f"  {filename}: {tracks[key]['tempo']} BPM")
         else:
             print(f"  нет файла music/{filename} — слот {key} пустой")
 
@@ -78,6 +89,7 @@ def main():
     beats: list[float] = []
     next_beat = 0
     playing = False
+    vol_i = 0
     buf = b""
 
     def send(cmd: str):
@@ -91,13 +103,21 @@ def main():
                 line, buf = buf.split(b"\n", 1)
                 cmd = line.decode(errors="ignore").strip()
 
-                if cmd in beats_by_slot:
+                if cmd in tracks:
                     filename, title = SLOTS[cmd]
+                    info = tracks[cmd]
                     pygame.mixer.music.load(MUSIC_DIR / filename)
                     pygame.mixer.music.play()
-                    beats, next_beat, playing = beats_by_slot[cmd], 0, True
+                    pygame.mixer.music.set_volume(VOLUME_STEPS[vol_i] / 100)
+                    beats, next_beat, playing = info["beats"], 0, True
                     send(f"N:{title}")
-                    print(f"▶ {title}")
+                    send(f"T:{info['tempo']}")
+                    print(f"▶ {title} ({info['tempo']} BPM)")
+                elif cmd == "D":
+                    vol_i = (vol_i + 1) % len(VOLUME_STEPS)
+                    pygame.mixer.music.set_volume(VOLUME_STEPS[vol_i] / 100)
+                    send(f"V:{VOLUME_STEPS[vol_i]}")
+                    print(f"🔊 {VOLUME_STEPS[vol_i]}%")
                 elif cmd == "S" and playing:
                     pygame.mixer.music.stop()
                     playing = False

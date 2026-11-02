@@ -1,8 +1,11 @@
 #pragma once
 #include <Arduino.h>
 
-// Пользовательские символы 5x8 для LCD 1602
-enum Sprite : uint8_t { CAT_STAND = 0, CAT_JUMP = 1, MUSIC_NOTE = 2 };
+// Пользовательские символы 5x8 для LCD 1602 (максимум 8 штук)
+enum Sprite : uint8_t {
+  CAT_STAND = 0, CAT_JUMP = 1, MUSIC_NOTE = 2,
+  CAT_LEAN_L = 3, CAT_LEAN_R = 4, CAT_ARMS_UP = 5
+};
 
 byte SPRITE_CAT_STAND[8] = {
   0b10001, 0b11111, 0b10101, 0b11111,
@@ -17,4 +20,19 @@ byte SPRITE_CAT_JUMP[8] = {
 byte SPRITE_NOTE[8] = {
   0b00100, 0b00110, 0b00101, 0b00100,
   0b01100, 0b11100, 0b11000, 0b00000
+};
+
+byte SPRITE_CAT_LEAN_L[8] = {
+  0b10010, 0b11110, 0b10110, 0b11110,
+  0b01110, 0b01111, 0b00110, 0b01011
+};
+
+byte SPRITE_CAT_LEAN_R[8] = {
+  0b01001, 0b01111, 0b01101, 0b01111,
+  0b01110, 0b11110, 0b01100, 0b11010
+};
+
+byte SPRITE_CAT_ARMS_UP[8] = {
+  0b10001, 0b11111, 0b10101, 0b11111,
+  0b10101, 0b01110, 0b01110, 0b11011
 };
