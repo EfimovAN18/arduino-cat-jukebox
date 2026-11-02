@@ -38,7 +38,7 @@ const Note TWINKLE[] = {
 #define SONG(name, arr, unit) { name, arr, sizeof(arr) / sizeof(Note), unit }
 
 const Song SONGS[] = {
-  SONG("ODE TO JOY",   ODE_TO_JOY,  250),  // джойстик влево
-  SONG("KOROBEINIKI",  KOROBEINIKI, 170),  // джойстик вправо
-  SONG("TWINKLE STAR", TWINKLE,     400),  // джойстик вверх
+  SONG("ODE TO JOY",   ODE_TO_JOY,  250),  // джойстик влево  -> слот для FACE «Лиза»
+  SONG("KOROBEINIKI",  KOROBEINIKI, 170),  // джойстик вправо -> слот для Френдзона «Бойчик»
+  SONG("TWINKLE STAR", TWINKLE,     400),  // джойстик вверх  -> слот для «Listen to Your Heart»
 };
